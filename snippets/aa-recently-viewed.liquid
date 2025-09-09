@@ -1,0 +1,13 @@
+<iv-recently-viewed
+  componenttitle="{{- _title | escape -}}"
+  titletag="{{- _title_tag -}}"
+  numbertoshow="{{- _number_to_show -}}"
+  noviewhistory="{{- _no_view_history | escape -}}"
+  requestedfields="{{- _requested_fields | escape -}}"
+>
+</iv-recently-viewed>
+
+{% comment %}
+  requestedfields could also be passed as an object using | split: ',' | map: 'strip' if preferred.
+  The _ preifx, is something I used to denoted an external variable being passed into the snippet.
+{% endcomment %}

@@ -1,0 +1,158 @@
+{% liquid
+  assign featured_collections = settings.featured_collections
+  assign featured_products = settings.featured_products
+  assign top_queries = settings.top_queries
+  assign featured_banner = settings.featured_banner
+  assign featured_banner_url = settings.featured_banner_url
+%}
+
+{% comment %}
+  {%- capture collections_json -%}
+    {% render 'json_encoding', _handles: featured_collections, _fields: 'id,handle,title,updated_at,published_at,sort_order,template_suffix,published_scope,body_html,image' %}
+  {%- endcapture -%}
+{% endcomment %}
+
+{% comment %}
+  <iv-dynamic-products
+    type="BEST_SELLING"
+    limit="6"
+    componenttitle="Foxy Socks Best Selling"
+    titletag="h1"
+    collectionhandle="all"
+    requestedfields="title,handle,images"
+    emptystring="No products found what so ever"
+    addtocarttext="Add to cart"
+    calltoaction="false"
+  >
+  </iv-dynamic-products>
+{% endcomment %}
+
+{% comment %}
+  <div class="container">
+    <iv-predictive-search
+      placeholder="I am looking for..."
+      gridlayout="product"
+      requestedfields="featured_image,price,title"
+      requestedresources="product,collection"
+      action="{{ routes.search_url }}"
+    >
+    </iv-predictive-search>
+    <iv-suggest
+      topqueries="{{- top_queries -}}"
+      gridlayout="queries queries, banner banner, collections products"
+      products="{{ featured_products | json | strip | strip_newlines | escape }}"
+      collections="{{ collections_json | strip | strip_newlines | escape }}"
+    >
+    </iv-suggest>
+  </div>
+{% endcomment %}
+
+{% comment %}
+  <iv-wishlist
+    buttonaddvalue="Add to wishlist"
+    buttonremovevalue="Remove from wishlist"
+    wishlistempty="Your wishlist is empty"
+    buttonaddtocartvalue="Add to cart"
+    viewwishlistvalue="View wishlist"
+    productdata="{{ product | json }}"
+    usefields="id,title,price,image,url"
+    previewtype="modal"
+  >
+  </iv-wishlist>
+{% endcomment %}
+
+<style>
+  :root {
+    --iv-predictive-background: #f9f9fb;
+    --iv-predictive-text-color: red;
+    --iv-predictive-contrast-color: orange;
+    --iv-predictive-border-radius: 8px;
+    --iv-predictive-border: 1px solid #d1d5db;
+    --iv-predictive-box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    --iv-predictive-input-background: #fff;
+    --iv-predictive-input-color: #222;
+    --iv-predictive-input-padding: 0.75rem 1rem;
+    --iv-predictive-label-color: #555;
+    --iv-predictive-label-font-size: 1.2rem;
+    --iv-predictive-results-background: #fff;
+    --iv-predictive-results-border: 1px solid #e5e7eb;
+    --iv-predictive-font-family: 'Arial', sans-serif;
+    --iv-predictive-font-size: 1rem;
+    --iv-predictive-wrapper-padding: 1rem;
+    --iv-predictive-label-font-weight: 600;
+    --iv-predictive-label-margin-bottom: 0.5rem;
+    --iv-predictive-input-border-radius: 4px;
+    --iv-predictive-input-border: 1px solid #d1d5db;
+    --iv-predictive-input-font-size: 1rem;
+    --iv-predictive-input-focus-border: 1px solid #7c3aed;
+    --iv-predictive-input-focus-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2);
+    --iv-predictive-results-border-radius: 8px;
+    --iv-predictive-results-box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    --iv-predictive-results-margin-top: 0.5rem;
+    --iv-predictive-results-padding: 0.5rem;
+    --iv-predictive-results-z-index: 1000;
+    --iv-predictive-list-gap: 0.5rem;
+    --iv-predictive-item-background: #fff;
+    --iv-predictive-item-border-radius: 4px;
+    --iv-predictive-item-hover-background: #f3f4f6;
+    --iv-predictive-link-color: #7c3aed;
+    --iv-predictive-link-padding: 0.5rem 1rem;
+    --iv-predictive-link-border-radius: 4px;
+    --iv-predictive-link-hover-color: #4c1d95;
+    --iv-predictive-link-hover-background: #f3f4f6;
+    --iv-predictive-image-width: 100px;
+    --iv-predictive-image-height: 100px;
+    --iv-predictive-image-margin-right: 0.5rem;
+    --iv-predictive-image-border-radius: 4px;
+    --iv-predictive-image-background: #f3f4f6;
+    --iv-predictive-image-border: 1px solid #e5e7eb;
+    --iv-predictive-part-font-size: 0.875rem;
+    --iv-predictive-part-color: #555;
+    --iv-predictive-part-margin-right: 0.5rem;
+    --iv-predictive-no-results-color: #888;
+    --iv-predictive-no-results-font-size: 1rem;
+    --iv-predictive-no-results-padding: 0.5rem;
+  }
+
+  .container {
+    width: 50%;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  .tertiary-title {
+    font-size: 1.5rem;
+    color: var(--iv-predictive-text-color);
+    margin-bottom: 20px;
+  }
+</style>
+
+{% schema %}
+{
+  "name": "Foxy Predictive Search",
+  "limit": 2,
+  "disabled_on": {
+    "templates": ["collection"]
+  },
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "foxy_predictive_search_enabled",
+      "label": "Enable predictive search component",
+      "default": true
+    },
+    { "type": "text", "id": "placeholder_text", "label": "Search placeholder", "default": "I am looking for..." },
+    { "type": "collection_list", "id": "featured_collections", "label": "Featured collections" },
+    { "type": "product_list", "id": "featured_products", "label": "Featured products" },
+    {
+      "type": "text",
+      "id": "top_queries",
+      "label": "Top queries (comma separated)",
+      "default": "socks, trainers, sandals"
+    },
+    { "type": "image_picker", "id": "featured_banner", "label": "Featured banner image" },
+    { "type": "url", "id": "featured_banner_url", "label": "Featured banner link" }
+  ],
+  "presets": [{ "name": "Foxy Predictive Search" }]
+}
+{% endschema %}

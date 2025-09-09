@@ -1,0 +1,66 @@
+{% assign fields = _fields | split: ',' | map: 'strip' %}
+{%- assign handles = _handles | default: blank -%}
+{%- assign items_array = '' -%}
+{%- for handle in handles -%}
+  {%- assign h = handle.handle | default: handle -%}
+  {%- assign item = collections[h] -%}
+  {%- assign image = item.image -%}
+  {%- if item -%}
+    {%- assign extras_fragment = '' -%}
+    {%- if _fields != blank -%}
+      {%- assign extra_fields = '' -%}
+      {%- for field in fields -%}
+        {%- assign field_name = field | strip -%}
+        {%- if field_name == 'id'
+          or field_name == 'handle'
+          or field_name == 'title'
+          or field_name == 'image'
+          or field_name == 'url'
+        -%}
+          {%- continue -%}
+        {%- endif -%}
+        {%- assign value = item[field_name] -%}
+        {%- if value != blank -%}
+          {%- if extra_fields != '' -%}
+            {%- assign extra_fields = extra_fields | append: ',' -%}
+          {%- endif -%}
+          {%- assign value_json = value | json -%}
+          {%- assign extra_fields = extra_fields
+            | append: '"'
+            | append: field_name
+            | append: '":'
+            | append: value_json
+          -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {%- if extra_fields != '' -%}
+        {%- assign extras_fragment = ',' | append: extra_fields -%}
+      {%- endif -%}
+    {%- endif -%}
+    {%- assign url = item.url -%}
+    {%- if url == blank -%}
+      {%- assign url = '/collections/' | append: item.handle -%}
+    {%- endif -%}
+    {%- capture item_json -%}
+      {
+        "id": {{ item.id | json }},
+        "handle": {{ item.handle | json }},
+        "title": {{ item.title | json }},
+        "image": {{ image | json }},
+        "url": {{ url | json }}{{ extras_fragment }}
+      }
+    {%- endcapture -%}
+    {%- if forloop.first -%}
+      {%- assign items_array = item_json -%}
+    {%- else -%}
+      {%- assign items_array = items_array | append: ',' | append: item_json -%}
+    {%- endif -%}
+  {%- endif -%}
+{%- endfor -%}
+{%- assign items_json = '[' | append: items_array | append: ']' -%}
+{%- assign object_json = '{"collections":' | append: items_json | append: '}' -%}
+{%- assign output_json = items_json -%}
+{%- if _wrap and _wrap == 'object' -%}
+  {%- assign output_json = object_json -%}
+{%- endif -%}
+{{ output_json }}

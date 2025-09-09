@@ -1,0 +1,225 @@
+<h1>Authentication Testing</h1>
+
+<p>
+  This page includes several storefront-only forms to empirically test whether customer data can be updated without a server (tags, note, metafields) and whether any form can reasonably trigger a Flow with custom payloads. Each form submits via fetch (no navigation) and prints the HTTP status and a short response snippet below.
+</p>
+
+<div class="aa-poc">
+  <section>
+    <h2>Test A: Newsletter (customer) form attempting to add tags</h2>
+    <p>
+      Attempts to add tags via the newsletter/customer form by posting <code>contact[tags]</code>. Expected: may tag as "newsletter" only; custom tags likely ignored.
+    </p>
+    <form class="js-intercept" data-name="newsletter-tags" method="post" action="{{ routes.root_url }}contact#contact_form">
+      <label>Email <input type="email" name="contact[email]" value="{% if customer %}{{ customer.email }}{% endif %}" required /></label>
+      <input type="hidden" name="form_type" value="customer" />
+      <input type="hidden" name="utf8" value="✓" />
+      <label>Requested tags (contact[tags])
+        <input type="text" name="contact[tags]" value="newsletter, poc-test, quiz:123, json::{\"score\":42}" />
+      </label>
+      <button type="submit">Submit (fetch)</button>
+      <pre class="result" aria-live="polite"></pre>
+    </form>
+  </section>
+
+  <section>
+    <h2>Test B: Attempt to update customer tags via /account</h2>
+    <p>
+      Posts <code>customer[tags]</code> to <code>/account</code>. Expected: ignored or rejected; modern Shopify no longer supports this from storefront.
+    </p>
+    <form class="js-intercept" data-name="customer-tags" method="post" action="/account">
+      <label>Tags (customer[tags])
+        <input type="text" name="customer[tags]" value="poc-manual, quiz:999" />
+      </label>
+      <input type="hidden" name="utf8" value="✓" />
+      <button type="submit">Submit (fetch)</button>
+      <pre class="result" aria-live="polite"></pre>
+    </form>
+  </section>
+
+  <section>
+    <h2>Test C: Attempt to update customer note via /account</h2>
+    <p>
+      Posts <code>customer[note]</code> JSON. Expected: ignored or rejected; customer note typically not writable from storefront.
+    </p>
+    <form class="js-intercept" data-name="customer-note" method="post" action="/account">
+      <label>Note (customer[note])
+        <input type="text" name="customer[note]" value='{"source":"poc","score":42}' />
+      </label>
+      <input type="hidden" name="utf8" value="✓" />
+      <button type="submit">Submit (fetch)</button>
+      <pre class="result" aria-live="polite"></pre>
+    </form>
+  </section>
+
+  <section>
+    <h2>Test D: Address create/update attempt outside account pages</h2>
+    <p>
+      Tries to create a new address via <code>/account/addresses</code>. Also includes extra fields to try to set tags/metafield. Expected: requires login; likely CSRF/redirect; extra fields ignored.
+    </p>
+    {% if customer %}
+    <form class="js-intercept" data-name="address-new" method="post" action="/account/addresses">
+      <input type="hidden" name="form_type" value="customer_address" />
+      <input type="hidden" name="utf8" value="✓" />
+      <label>First name <input type="text" name="address[first_name]" value="POC" /></label>
+      <label>Last name <input type="text" name="address[last_name]" value="Test" /></label>
+      <label>Address1 <input type="text" name="address[address1]" value="123 POC St" /></label>
+      <label>City <input type="text" name="address[city]" value="London" /></label>
+      <label>Country <input type="text" name="address[country]" value="United Kingdom" /></label>
+      <label>Zip <input type="text" name="address[zip]" value="SW1A 1AA" /></label>
+      <label>Default <input type="checkbox" name="address[default]" value="1" checked /></label>
+
+      <!-- Attempts that should be ignored -->
+      <input type="hidden" name="customer[tags]" value="poc-addr" />
+      <input type="hidden" name="customer[note]" value='{"key":"addr"}' />
+      <input type="hidden" name="customer[metafields][custom][the_foxy_field]" value='{"score":7}' />
+
+      <button type="submit">Submit (fetch)</button>
+      <pre class="result" aria-live="polite"></pre>
+    </form>
+    {% else %}
+      <p><em>Must be logged in to test address create/update.</em></p>
+    {% endif %}
+  </section>
+
+  <section>
+    <h2>Test E: Metafield write attempt via /account</h2>
+    <p>
+      Posts <code>customer[metafields][custom][the_foxy_field]</code> JSON to <code>/account</code>. Expected: ignored; metafields can't be written from storefront forms.
+    </p>
+    <form class="js-intercept" data-name="metafield-account" method="post" action="/account">
+      <input type="hidden" name="utf8" value="✓" />
+      <label>Metafield JSON
+        <input type="text" name="customer[metafields][custom][the_foxy_field]" value='{"score":99,"answers":[1,2,3]}' />
+      </label>
+      <button type="submit">Submit (fetch)</button>
+      <pre class="result" aria-live="polite"></pre>
+    </form>
+  </section>
+
+  <section>
+    <h2>Test F: Contact form (Flow plausibility)</h2>
+    <p>
+      Standard contact form (goes to store inbox). Hidden fields attempt to carry JSON. Expected: Flow can't access arbitrary hidden fields from this submission.
+    </p>
+    <form class="js-intercept" data-name="contact-form" method="post" action="{{ routes.root_url }}contact#contact_form">
+      <input type="hidden" name="form_type" value="contact" />
+      <input type="hidden" name="utf8" value="✓" />
+      <label>Name <input type="text" name="contact[name]" value="POC Tester" required /></label>
+      <label>Email <input type="email" name="contact[email]" value="{% if customer %}{{ customer.email }}{% endif %}" required /></label>
+      <label>Message <textarea name="contact[body]">POC contact - attempting to include JSON in hidden field</textarea></label>
+      <input type="hidden" name="poc_payload" value='{"score":123,"source":"contact"}' />
+      <button type="submit">Submit (fetch)</button>
+      <pre class="result" aria-live="polite"></pre>
+    </form>
+  </section>
+
+  <section>
+    <h2>Test G: Address UPDATE + tag/metafield injection</h2>
+    <p>
+      Updates an existing address and simultaneously attempts to inject tags and a customer metafield. Expected: address updates only; all extra fields ignored. If any Flow triggers on address update, it will not receive hidden custom payloads.
+    </p>
+    {% if customer and customer.default_address %}
+    <form class="js-intercept" data-name="address-update-inject" method="post" action="/account/addresses/{{ customer.default_address.id }}">
+      <input type="hidden" name="_method" value="put" />
+      <input type="hidden" name="form_type" value="customer_address" />
+      <input type="hidden" name="utf8" value="✓" />
+
+      <label>First name <input type="text" name="address[first_name]" value="POC-Update" /></label>
+      <label>Last name <input type="text" name="address[last_name]" value="Tester" /></label>
+      <label>Address1 <input type="text" name="address[address1]" value="456 Updated Ave" /></label>
+      <label>City <input type="text" name="address[city]" value="Manchester" /></label>
+      <label>Country <input type="text" name="address[country]" value="United Kingdom" /></label>
+      <label>Zip <input type="text" name="address[zip]" value="M1 1AA" /></label>
+
+      <!-- Injection attempts (should be ignored) -->
+      <input type="hidden" name="customer[tags]" value="poc-addr-update, quiz:addr" />
+      <input type="hidden" name="tags" value="top-level-tags-should-be-ignored" />
+      <input type="hidden" name="customer[metafields][custom][the_foxy_field]" value='{"score":321,"source":"addr-update"}' />
+      <input type="hidden" name="metafields[custom][the_foxy_field]" value='{"score":999}' />
+      <input type="hidden" name="address[metafields][custom][the_foxy_field]" value='{"not":"supported"}' />
+
+      <button type="submit">Submit (fetch)</button>
+      <pre class="result" aria-live="polite"></pre>
+    </form>
+    {% else %}
+      <p><em>Must be logged in with an existing address to test address update.</em></p>
+    {% endif %}
+  </section>
+
+  <section>
+    <h2>Test H: Liquid contact form with CAPTCHA token + injection</h2>
+    <p>
+      Uses a native Liquid contact form to include Shopify's CAPTCHA token. Attempts to inject tags and metafield-like fields. Expected: submission succeeds (no "Missing CAPTCHA token"), but no customer tags/metafields change; Flow cannot consume arbitrary hidden payloads.
+    </p>
+    {% form 'contact', id: 'ContactLiquidPOC', data-name: 'contact-liquid' %}
+      <label>Name <input type="text" name="contact[name]" value="POC Liquid" required></label>
+      <label>Email <input type="email" name="contact[email]" value="{% if customer %}{{ customer.email }}{% endif %}" required></label>
+      <label>Message <textarea name="contact[body]">POC via Liquid form with hidden payloads</textarea></label>
+
+      <!-- Injection attempts (should be ignored by Shopify/customer model) -->
+      <input type="hidden" name="customer[tags]" value="poc-liquid, injected" />
+      <input type="hidden" name="customer[metafields][custom][the_foxy_field]" value='{"score":777,"source":"contact-liquid"}' />
+      <input type="hidden" name="poc_payload" value='{"score":456,"source":"contact-liquid"}' />
+
+      <button type="submit">Submit Liquid Contact (fetch)</button>
+      <pre class="result" aria-live="polite"></pre>
+    {% endform %}
+  </section>
+</div>
+
+<script>
+  (function() {
+    function formToObject(form) {
+      const data = new FormData(form);
+      const out = {};
+      for (const [k, v] of data.entries()) {
+        out[k] = v;
+      }
+      return out;
+    }
+
+    async function postForm(form) {
+      const resultEl = form.querySelector('.result');
+      resultEl.textContent = 'Submitting…';
+      try {
+        const res = await fetch(form.action, {
+          method: (form.method || 'post').toUpperCase(),
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
+          body: new URLSearchParams(new FormData(form)),
+          redirect: 'manual',
+          credentials: 'same-origin'
+        });
+        const status = res.status;
+        let bodySnippet = '';
+        try {
+          const text = await res.text();
+          bodySnippet = text.slice(0, 400).replace(/</g, '&lt;');
+        } catch (e) {}
+        resultEl.innerHTML = 'Status: ' + status + (res.type ? ('\nType: ' + res.type) : '') + (res.url ? ('\nURL: ' + res.url) : '') + '\nFirst 400 chars of response:\n' + bodySnippet;
+      } catch (err) {
+        resultEl.textContent = 'Network error: ' + (err && err.message ? err.message : String(err));
+      }
+    }
+
+    document.addEventListener('click', function(e) {
+      const btn = e.target.closest('form.js-intercept button[type="submit"]');
+      if (!btn) return;
+      const form = btn.closest('form');
+      e.preventDefault();
+      postForm(form);
+    });
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Foxy Authentication",
+  "settings": [],
+  "presets": [
+    {
+      "name": "Foxy Authentication"
+    }
+  ]
+}
+{% endschema %}
