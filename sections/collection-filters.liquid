@@ -1,0 +1,51 @@
+{% render 'iv-filters' %}
+
+{%- schema -%}
+{
+  "name": "Collection filters",
+  "class": "section-collection-filters",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Filters"
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_filtering",
+      "label": "Enable filtering",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_sorting",
+      "label": "Enable sorting",
+      "default": true
+    },
+    {
+      "type": "select",
+      "id": "filter_type",
+      "label": "Filter layout",
+      "default": "vertical",
+      "options": [
+        { "value": "vertical", "label": "Vertical sidebar" },
+        { "value": "horizontal", "label": "Horizontal bar" },
+        { "value": "drawer", "label": "Drawer" }
+      ]
+    },
+    {
+      "type": "select",
+      "id": "snippet_mode",
+      "label": "Snippet mode",
+      "info": "Use debug mode to inspect raw filter data while building Stencil components.",
+      "default": "facets",
+      "options": [
+        { "value": "facets", "label": "Facets UI" },
+        { "value": "iv-filters-debug", "label": "Debug (data dump)" }
+      ]
+    }
+  ],
+  "presets": [{ "name": "Collection filters" }]
+}
+{%- endschema -%}
